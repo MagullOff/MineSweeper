@@ -21,7 +21,8 @@
 #define MAX_SIZEY 24
 #define MAX_SIZEX 30
 #define MIN_MINE_AMOUNT 10
-#define MIN_SIZE 10
+#define MIN_SIZE 6
+#define DEFAULT_SIZE 10
 #define PANEL_HEIGHT 40
 #define FONT_SIZE 25
 #define MINE -1
@@ -31,8 +32,8 @@
 HINSTANCE hInst;
 WCHAR szTitle[MAX_LOADSTRING];
 WCHAR szWindowClass[MAX_LOADSTRING];
-int sizeX = MIN_SIZE;
-int sizeY = MIN_SIZE;
+int sizeX = DEFAULT_SIZE;
+int sizeY = DEFAULT_SIZE;
 int windowHeight;
 int windowWidth;
 unsigned long long currentTime = 0;
@@ -50,7 +51,17 @@ HWND BoxArr[MAX_SIZEX][MAX_SIZEY];
 HWND WindowMain;
 bool isDebug = false;
 bool isTimerOn = false;
-
+const COLORREF colorTab[9] = {
+        RGB(0, 0, 0),
+        RGB(0, 0, 0xFF),
+        RGB(0, 0xFF, 0),
+        RGB(0xFF, 0, 0),
+        RGB(255,20,147),
+        RGB(153, 0, 0),
+        RGB(0, 255, 255),
+        RGB(249, 215, 28),
+        RGB(0, 0, 0)
+};
 
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 ATOM                MyBoxClass(HINSTANCE hInstance);
@@ -414,11 +425,7 @@ void RepaintPanel()
     TCHAR buf1[BUFSIZE];
 
     HDC hdc = GetDC(WindowMain);
-    Rectangle(hdc, 1, 1, windowWidth - 2, PANEL_HEIGHT - 2);
-    if (count) currentTime = GetTickCount64() - timer0;
-    wsprintfW(buf, L"%04d", CurrentMineAmount);
-    wsprintfW(buf1, L"%04d.%d", int(currentTime / 1000), int(currentTime / 100) - int((currentTime / 1000) * 10));
-    HFONT font = CreateFont(
+    HFONT panelFont = CreateFont(
         FONT_SIZE,
         0,
         0,
@@ -434,6 +441,12 @@ void RepaintPanel()
         DEFAULT_PITCH | FF_SWISS,
         _T("Arial")
     );
+
+    Rectangle(hdc, 1, 1, windowWidth - 2, PANEL_HEIGHT - 2);
+    if (count) currentTime = GetTickCount64() - timer0;
+    wsprintfW(buf, L"%04d", CurrentMineAmount);
+    wsprintfW(buf1, L"%04d.%d", int(currentTime / 1000), int(currentTime / 100) - int((currentTime / 1000) * 10));
+    HFONT font = panelFont;
     HFONT oldFont = (HFONT)SelectObject(hdc, font);
     RECT rc;
     GetClientRect(WindowMain, &rc);
@@ -469,22 +482,8 @@ void DrawBackGround(int x, int y)
 
 void DrawNumber(int x, int y)
 {
-    COLORREF colorTab[9] = { 
-        RGB(0, 0, 0),
-        RGB(0, 0, 0xFF),
-        RGB(0, 0xFF, 0),
-        RGB(0xFF, 0, 0),
-        RGB(216, 191, 216),
-        RGB(153, 0, 0),
-        RGB(0, 255, 255),
-        RGB(0, 0, 0),
-        RGB(102, 102, 153)
-    };
-
     HDC hdc = GetDC(BoxArr[x][y]);
-    wchar_t buffer[BUFSIZE];
-    wsprintfW(buffer, L"%d", MineArr[x][y]);
-    HFONT font = CreateFont(
+    HFONT boxFont = CreateFont(
         20,
         0,
         0,
@@ -500,6 +499,9 @@ void DrawNumber(int x, int y)
         DEFAULT_PITCH | FF_SWISS,
         _T("Arial")
     );
+    wchar_t buffer[BUFSIZE];
+    wsprintfW(buffer, L"%d", MineArr[x][y]);
+    HFONT font = boxFont;
     HFONT oldFont = (HFONT)SelectObject(hdc, font);
     SetTextColor(hdc, colorTab[MineArr[x][y]]);
     SetBkMode(hdc, TRANSPARENT);
@@ -512,15 +514,11 @@ void DrawNumber(int x, int y)
 void PaintBox(int x, int y)
 {
     if (FlagArr[x][y])
-    {
-        PaintFlag(x, y);
-        return;
-    }
-
+        return PaintFlag(x, y);
+        
     DrawBackGround(x, y);
-
-    if ((!Visible[x][y] && !isDebug) || MineArr[x][y] == 0) return;
-
+    if (!Visible[x][y] && !isDebug) return;
+    if (MineArr[x][y] == 0) return;
     if (MineArr[x][y] == MINE) DrawMine(x, y);
     else DrawNumber(x, y);
 }
@@ -539,6 +537,17 @@ void PaintFlag(int x, int y)
     StretchBlt(hdc, 1, 1, BOX_SIZE-2, BOX_SIZE-2, memDC, 0, 0, bmInfo.bmWidth, bmInfo.bmHeight, SRCCOPY);
     DeleteObject(bitmap);
     ReleaseDC(BoxArr[x][y], hdc);
+}
+
+void FlagMinesAccept(int x = -1, int y = -1)
+{
+        for (int i = 0; i < sizeX; i++)
+            for (int j = 0; j < sizeY; j++)
+                if (!(i == x && j == y) && MineArr[i][j] == MINE)
+                {
+                    PaintFlag(i, j);
+                    FlagArr[i][j] = true;
+                }
 }
 #pragma endregion
 
@@ -689,6 +698,7 @@ void handleClick(int x, int y)
         for (int i = 0; i < sizeX; i++)
             for (int j = 0; j < sizeY; j++)
                 makeVisible(i, j);
+        FlagMinesAccept(x, y);
         BOOM();
         break;
     case 0:
@@ -701,10 +711,12 @@ void handleClick(int x, int y)
 
     if (checkWin()) {
         count = false;
-        WinPrompt();
+        
         for (int i = 0; i < sizeX; i++)
             for (int j = 0; j < sizeY; j++)
                 makeVisible(i, j);
+        FlagMinesAccept();
+        WinPrompt();
     }
 }
 
@@ -733,10 +745,12 @@ void  flagBox(int x, int y)
     if (checkWin())
     {
         count = false;
-        WinPrompt();
+        
         for (int i = 0; i < sizeX; i++)
             for (int j = 0; j < sizeY; j++)
                 makeVisible(i, j);
+        FlagMinesAccept();
+        WinPrompt();
     }
 }
 

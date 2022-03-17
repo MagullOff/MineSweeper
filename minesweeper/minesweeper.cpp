@@ -540,16 +540,6 @@ void PaintFlag(int x, int y)
     ReleaseDC(BoxArr[x][y], hdc);
 }
 
-void FlagMinesAccept(int x = -1, int y = -1)
-{
-        for (int i = 0; i < sizeX; i++)
-            for (int j = 0; j < sizeY; j++)
-                if (!(i == x && j == y) && MineArr[i][j] == MINE)
-                {
-                    PaintFlag(i, j);
-                    FlagArr[i][j] = true;
-                }
-}
 #pragma endregion
 
 #pragma region GAME_MECHANICKS
@@ -699,7 +689,6 @@ void handleClick(int x, int y)
         for (int i = 0; i < sizeX; i++)
             for (int j = 0; j < sizeY; j++)
                 makeVisible(i, j);
-        FlagMinesAccept(x, y);
         BOOM();
         break;
     case 0:
@@ -716,7 +705,6 @@ void handleClick(int x, int y)
         for (int i = 0; i < sizeX; i++)
             for (int j = 0; j < sizeY; j++)
                 makeVisible(i, j);
-        FlagMinesAccept();
         WinPrompt();
     }
 }
@@ -750,7 +738,6 @@ void  flagBox(int x, int y)
         for (int i = 0; i < sizeX; i++)
             for (int j = 0; j < sizeY; j++)
                 makeVisible(i, j);
-        FlagMinesAccept();
         WinPrompt();
     }
 }

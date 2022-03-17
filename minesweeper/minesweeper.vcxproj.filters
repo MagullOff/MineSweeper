@@ -45,5 +45,8 @@
     <Image Include="minesweeper.ico">
       <Filter>Pliki zasobów</Filter>
     </Image>
+    <Image Include="flag.bmp">
+      <Filter>Pliki zasobów</Filter>
+    </Image>
   </ItemGroup>
 </Project>

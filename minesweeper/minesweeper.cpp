@@ -51,6 +51,7 @@ HWND BoxArr[MAX_SIZEX][MAX_SIZEY];
 HWND WindowMain;
 bool isDebug = false;
 bool isTimerOn = false;
+
 const COLORREF colorTab[9] = {
         RGB(0, 0, 0),
         RGB(0, 0, 0xFF),
